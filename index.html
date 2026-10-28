@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asistanım</title>
+<style>
+:root{--bg:#fff;--fg:#1c1b1f;--mu:#6b6b76;--card:#f2f2f6;--ac:#4f46e5;--acf:#fff;--bd:#e0e0e8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root{--bg:#121214;--fg:#ececf1;--mu:#9a9aa6;--card:#1e1e24;--ac:#818cf8;--acf:#101018;--bd:#2c2c36}}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+header{padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;font-weight:600}
+main{flex:1;overflow-y:auto;padding:12px 16px}
+nav{display:flex;border-top:1px solid var(--bd)}
+nav button{flex:1;padding:12px 0;background:none;border:0;color:var(--mu);font:inherit;font-size:13px}
+nav button.on{color:var(--ac);font-weight:600}
+.v{display:none}.v.on{display:block}
+.m{max-width:85%;padding:10px 13px;border-radius:16px;margin:8px 0;white-space:pre-wrap;word-wrap:break-word}
+.u{background:var(--ac);color:var(--acf);margin-left:auto;border-bottom-right-radius:4px}
+.a{background:var(--card);border-bottom-left-radius:4px}
+.n{font-size:12px;color:var(--mu);text-align:center;margin:4px 0}
+#bar{display:flex;gap:8px;padding:8px 16px;border-top:1px solid var(--bd)}
+textarea,input{width:100%;background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:12px;padding:10px;font:inherit}
+textarea{resize:none}
+button.b{background:var(--ac);color:var(--acf);border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:600}
+button.g{background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;font:inherit}
+.row{display:flex;gap:8px;align-items:center;background:var(--card);border-radius:12px;padding:10px 12px;margin:8px 0}
+.row span{flex:1;word-break:break-word}
+label{display:block;margin:14px 0 4px;font-size:13px;color:var(--mu)}
+.s button{margin:6px 6px 0 0}
+small{color:var(--mu)}
+</style></head><body>
+<header><span id="ttl">Asistanım</span><button class="g" id="nw">Yeni sohbet</button></header>
+<main>
+ <div class="v on" id="v-chat"><div id="log"></div></div>
+ <div class="v" id="v-hist"></div>
+ <div class="v" id="v-mem"></div>
+ <div class="v s" id="v-set"></div>
+</main>
+<div id="bar"><textarea id="in" rows="1" placeholder="Bir şey yaz…"></textarea><button class="b" id="go">Gönder</button></div>
+<nav id="nav"><button data-v="chat" class="on">Sohbet</button><button data-v="hist">Geçmiş</button><button data-v="mem">Hafıza</button><button data-v="set">Ayarlar</button></nav>
+<script>
+const K="asistan_v1";
+const DEF={set:{key:"",model:"gemini-2.5-flash",sys:"Sen kullanıcının kişisel asistanısın. Türkçe, samimi ve net konuş."},mem:[],chats:[],cur:null};
+let S;try{S=Object.assign({},DEF,JSON.parse(localStorage.getItem(K)||"{}"))}catch(e){S=JSON.parse(JSON.stringify(DEF))}
+function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){alert("Kayıt yapılamadı: "+e.message)}}
+const $=id=>document.getElementById(id);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function chat(){return S.chats.find(c=>c.id===S.cur)}
+function show(v){document.querySelectorAll(".v").forEach(x=>x.classList.toggle("on",x.id==="v-"+v));
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+ $("bar").style.display=v==="chat"?"flex":"none";
+ ({chat:rChat,hist:rHist,mem:rMem,set:rSet})[v]()}
+$("nav").onclick=e=>{if(e.target.dataset.v)show(e.target.dataset.v)};
+$("nw").onclick=()=>{S.cur=null;save();show("chat")};
+function bubble(r,t){const d=el("div","m "+(r==="u"?"u":"a"),t);$("log").appendChild(d);d.scrollIntoView();return d}
+function rChat(){const L=$("log");L.textContent="";const c=chat();
+ if(!c){L.appendChild(el("div","n","Yeni sohbet. Merhaba! Nasıl yardımcı olabilirim?"));return}
+ c.msgs.forEach(m=>bubble(m.r,m.t))}
+function rHist(){const V=$("v-hist");V.textContent="";
+ if(!S.chats.length)V.appendChild(el("div","n","Henüz sohbet yok."));
+ S.chats.slice().reverse().forEach(c=>{const r=el("div","row");const s=el("span","",c.title);s.onclick=()=>{S.cur=c.id;save();show("chat")};
+  const d=el("button","g","Sil");d.onclick=()=>{if(confirm("Bu sohbet silinsin mi?")){S.chats=S.chats.filter(x=>x.id!==c.id);if(S.cur===c.id)S.cur=null;save();rHist()}};
+  r.append(s,d);V.appendChild(r)})}
+function rMem(){const V=$("v-mem");V.textContent="";
+ V.appendChild(el("small","","Asistan bunları her sohbette bilir. Yeni bilgi öğrenince buraya ekler.")); 
+ const a=el("button","b","+ Bilgi ekle");a.style.margin="10px 0";a.onclick=()=>{const t=prompt("Hatırlanacak bilgi:");if(t&&t.trim()){S.mem.push({id:uid(),t:t.trim()});save();rMem()}};V.appendChild(a);
+ S.mem.forEach(m=>{const r=el("div","row");r.appendChild(el("span","",m.t));
+  const e=el("button","g","Düzenle");e.onclick=()=>{const t=prompt("Düzenle:",m.t);if(t!==null){if(t.trim())m.t=t.trim();save();rMem()}};
+  const d=el("button","g","Sil");d.onclick=()=>{S.mem=S.mem.filter(x=>x.id!==m.id);save();rMem()};
+  r.append(e,d);V.appendChild(r)})}
+function dl(name,text,type){const a=el("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+function rSet(){const V=$("v-set");V.textContent="";
+ const f=(lab,id,val,ta)=>{V.appendChild(el("label","",lab));const i=ta?el("textarea"):el("input");if(ta)i.rows=6;i.value=val;i.onchange=()=>{S.set[id]=i.value.trim();save()};V.appendChild(i)};
+ f("Gemini API anahtarı (ücretsiz: aistudio.google.com)","key",S.set.key);
+ f("Model adı","model",S.set.model);
+ f("Kişilik / sistem talimatı","sys",S.set.sys,true);
+ V.appendChild(el("label","","Veri yönetimi"));
+ const b=(t,fn)=>{const x=el("button","g",t);x.onclick=fn;V.appendChild(x)};
+ b("Yedeği indir (JSON)",()=>dl("asistan-yedek.json",JSON.stringify(S,null,1),"application/json"));
+ b("Yedeği yükle",()=>{const i=el("input");i.type="file";i.accept=".json";i.onchange=()=>{const r=new FileReader();r.onload=()=>{try{S=Object.assign({},DEF,JSON.parse(r.result));save();alert("Yüklendi");show("set")}catch(e){alert("Dosya geçersiz")}};r.readAsText(i.files[0])};i.click()});
+ b("Kaynak kodunu indir",()=>dl("asistanim.html","<!DOCTYPE html>\n"+document.documentElement.outerHTML,"text/html"));
+ b("Tüm verileri sil",()=>{if(confirm("Sohbetler, hafıza ve ayarlar silinecek. Emin misin?")){localStorage.removeItem(K);location.reload()}});
+ const p=el("p","");p.style.cssText="font-size:13px;color:var(--mu);margin-top:18px";
+ p.textContent="Gizlilik: Tüm veriler yalnızca bu telefondaki tarayıcı depolamasında tutulur; benim bir sunucum yok. İnternet gerektiren tek şey yapay zekâ yanıtıdır: mesajların, hafıza notların ve talimatın Google’ın Gemini servisine gönderilir. Geçmiş, hafıza ve ayarlar internetsiz de görüntülenebilir/düzenlenebilir. Google’ın ücretsiz katmanda verileri nasıl kullandığını kendi şartlarından kontrol et.";
+ V.appendChild(p)}
+async function send(){
+ const t=$("in").value.trim();if(!t)return;
+ if(!S.set.key){alert("Önce Ayarlar’dan API anahtarını gir.");show("set");return}
+ let c=chat();if(!c){c={id:uid(),title:t.slice(0,40),msgs:[]};S.chats.push(c);S.cur=c.id}
+ if(c.msgs.length===0&&$("log").querySelector(".n"))$("log").textContent="";
+ c.msgs.push({r:"u",t});$("in").value="";bubble("u",t);save();
+ const w=bubble("a","…");
+ const sys=S.set.sys+"\n\nKullanıcı hakkında bildiklerin:\n"+(S.mem.map(m=>"- "+m.t).join("\n")||"(henüz yok)")+"\n\nKullanıcı kalıcı olarak hatırlanması gereken yeni bir bilgi söylerse yanıtının sonuna [HAFIZA: kısa not] ekle.";
+ try{
+  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(S.set.model)+":generateContent",{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":S.set.key},
+   body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:c.msgs.map(m=>({role:m.r==="u"?"user":"model",parts:[{text:m.t}]}))})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error&&d.error.message||r.status);
+  let out=(d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts||[]).map(p=>p.text||"").join("")||"(Boş yanıt; servis bu isteği engellemiş olabilir.)";
+  const found=[...out.matchAll(/\[HAFIZA:\s*([^\]]+)\]/g)].map(x=>x[1].trim());
+  out=out.replace(/\[HAFIZA:[^\]]*\]/g,"").trim();
+  found.forEach(f=>S.mem.push({id:uid(),t:f}));
+  c.msgs.push({r:"a",t:out});save();w.textContent=out;
+  if(found.length){$("log").appendChild(el("div","n","Hafızaya eklendi: "+found.join("; ")))}
+ }catch(e){c.msgs.pop();save();w.textContent="Hata: "+e.message+" (İnternet ve API anahtarını kontrol et.)"}
+ w.scrollIntoView()}
+$("go").onclick=send;
+rChat();
+</script></body></html>
